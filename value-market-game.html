@@ -1,0 +1,148 @@
+<html>
+        <head><title>Downloaded HTML</title></head>
+        <body>
+            <pre style="white-space: pre-wrap; word-wrap: break-word;"><!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="background:#ffd6e7; margin:0; padding:10px; text-align:center; font-family:Arial;">
+
+<h1 style="color:#be185d;">Loyalty Game</h1>
+
+<div id="startScreen" style="background:white; border-radius:20px; padding:20px; margin:10px;">
+<input id="playerName" placeholder="Enter your name" style="padding:12px; border-radius:15px; border:2px solid #f9a8d4; width:80%; text-align:center;">
+<br><br>
+<button onclick="startGame()" style="padding:12px 25px; background:#ec4899; color:white; border:none; border-radius:25px; font-weight:bold;">Start Game</button>
+<div id="board" style="margin-top:15px; background:#fff0f5; padding:10px; border-radius:10px; text-align:left;"></div>
+</div>
+
+<div id="gameScreen" style="display:none;">
+
+<div style="background:white; border-radius:20px; padding:15px; margin:10px;">
+<h3>1 - Memory Game</h3>
+<div id="memGrid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; max-width:320px; margin:auto;"></div>
+<p id="memMsg" style="color:#ec4899; font-weight:bold; margin-top:10px;"></p>
+<button onclick="createMemory()" style="background:#f9a8d4; color:white; border:none; padding:8px 15px; border-radius:15px;">Restart Memory</button>
+</div>
+
+<div style="background:white; border-radius:20px; padding:15px; margin:10px;">
+<h3>2 - Hangman Level <span id="levelNum">1</span>/5</h3>
+<p id="wordDisplay" style="font-size:28px; letter-spacing:6px; font-weight:bold; color:#be185d;"></p>
+<p style="background:#fff7ed; border-radius:10px; padding:8px;">HINT: <span id="hintText">Press Show Hint</span></p>
+<button onclick="doHint()" style="background:#a5f3fc; border:none; padding:6px 12px; border-radius:10px;">Show Hint (-5)</button>
+<p id="livesText" style="font-weight:bold;"></p>
+<div id="keyBoard" style="display:flex; flex-wrap:wrap; justify-content:center; gap:5px; max-width:320px; margin:10px auto;"></div>
+</div>
+
+<div style="background:white; border-radius:20px; padding:15px; margin:10px;">
+<h3>3 - Quiz (3 Questions)</h3>
+<div id="quizArea"></div>
+<h2 id="scoreText">Score: 0</h2>
+<button onclick="saveScore()" style="background:#facc15; border:none; padding:10px 15px; border-radius:10px; font-weight:bold;">Save to Leaderboard</button>
+<button onclick="location.reload()" style="background:#e5e7eb; border:none; padding:10px 15px; border-radius:10px;">Play Again</button>
+</div>
+
+</div>
+
+<script>
+var score=0, level=0, lives=5, guessed=[], word="";
+var words=["LOYALTY","FRIENDSHIP","HONESTY","KINDNESS","RESPECT"];
+var hints=["Staying true","Strong bond","Telling truth","Being nice","Respect others"];
+var boardList = JSON.parse(localStorage.getItem("loyaltyALL") || "[]");
+var player="";
+
+function showBoard(){
+ var b=document.getElementById("board");
+ if(boardList.length==0){b.innerHTML="Leaderboard empty"; return;}
+ boardList.sort((a,b)=>b.score-a.score);
+ var html="<b>Leaderboard Offline</b><br><br>";
+ for(var i=0;i<Math.min(10,boardList.length);i++){html+=(i+1)+". "+boardList[i].name+" - "+boardList[i].score+" pts<br>";}
+ b.innerHTML=html;
+}
+showBoard();
+function startGame(){
+ player=document.getElementById("playerName").value;
+ if(player==""){alert("Enter name"); return;}
+ document.getElementById("startScreen").style.display="none";
+ document.getElementById("gameScreen").style.display="block";
+ createMemory(); nextLevel(); createQuiz();
+}
+function createMemory(){
+ var vals=["Together","Bond","Trust","Faithful","Forever","Unbreakable","Loyalty","Stronger"];
+ var cards=[]; for(var i=0;i<vals.length;i++){cards.push(vals[i]); cards.push(vals[i]);}
+ cards.sort(()=>Math.random()-0.5);
+ var grid=document.getElementById("memGrid"); grid.innerHTML="";
+ document.getElementById("memMsg").innerHTML="";
+ var first=null, lock=false, matched=0;
+ for(var i=0;i<cards.length;i++){
+  (function(v){
+   var d=document.createElement("div"); d.innerHTML="?";
+   d.style.cssText="background:#f9a8d4; color:white; height:65px; display:flex; align-items:center; justify-content:center; border-radius:12px; font-weight:bold; font-size:12px;";
+   d.onclick=function(){
+    if(lock||d.innerHTML!="?") return; d.innerHTML=v; d.style.background="#f472b6";
+    if(first==null){first=d;}
+    else{
+     if(first.innerHTML==v){score+=10; matched+=2; first.style.background="#ec4899"; d.style.background="#ec4899"; first=null; if(matched==16){document.getElementById("memMsg").innerHTML="Perfect! All matched!"; score+=50;}}
+     else{lock=true; var f=first; setTimeout(function(){f.innerHTML="?"; f.style.background="#f9a8d4"; d.innerHTML="?"; d.style.background="#f9a8d4"; first=null; lock=false;},650);}
+     document.getElementById("scoreText").innerHTML="Score: "+score;
+    }
+   }; grid.appendChild(d);
+  })(cards[i]);
+ }
+}
+function nextLevel(){
+ if(level>=5){document.getElementById("wordDisplay").innerHTML="YOU WON!"; document.getElementById("keyBoard").innerHTML=""; return;}
+ word=words[level]; guessed=[]; lives=5;
+ document.getElementById("levelNum").innerHTML=level+1;
+ document.getElementById("hintText").innerHTML="Press Show Hint";
+ makeKeys(); updateWord();
+}
+function makeKeys(){
+ var kb=document.getElementById("keyBoard"); kb.innerHTML="";
+ var abc="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+ for(var i=0;i<abc.length;i++){
+  var l=abc[i]; var btn=document.createElement("button"); btn.innerHTML=l; btn.id="K"+l;
+  btn.style.cssText="width:36px; height:36px; border-radius:8px; border:2px solid #f9a8d4; background:white; font-weight:bold;";
+  (function(letter, b){ b.onclick=function(){guessLetter(letter);}; })(l, btn);
+  kb.appendChild(btn);
+ }
+}
+function updateWord(){
+ var show=""; for(var i=0;i<word.length;i++){show+= (guessed.indexOf(word[i])>=0 ? word[i] : "_") + " ";}
+ document.getElementById("wordDisplay").innerHTML=show;
+ document.getElementById("livesText").innerHTML="Lives: "+lives+" | "+guessed.join(", ");
+}
+function doHint(){ document.getElementById("hintText").innerHTML=hints[level]+" (-5)"; if(score>=5)score-=5; document.getElementById("scoreText").innerHTML="Score: "+score;}
+function guessLetter(l){
+ if(guessed.indexOf(l)>=0) return; guessed.push(l);
+ var btn=document.getElementById("K"+l);
+ if(word.indexOf(l)>=0){score+=10; btn.style.background="#86efac";}
+ else{lives--; btn.style.background="#fca5a5"; if(lives==0){alert("Word was: "+word); level++; nextLevel(); return;}}
+ btn.disabled=true; updateWord(); document.getElementById("scoreText").innerHTML="Score: "+score;
+ if(document.getElementById("wordDisplay").innerHTML.indexOf("_")==-1){score+=50; alert("Level Done +50"); level++; setTimeout(nextLevel,400);}
+}
+function createQuiz(){
+ var qs=[
+  {q:"1. What is loyalty?", a:["Staying true","Cheating","Lying"], correct:0},
+  {q:"2. Best friend should be?", a:["Loyal","Fake","Mean"], correct:0},
+  {q:"3. Loyalty means?", a:["Trust forever","Leave quickly","Ignore feelings"], correct:0}
+ ];
+ var qa=document.getElementById("quizArea"); qa.innerHTML="";
+ for(var i=0;i<qs.length;i++){
+  var div=document.createElement("div"); div.style.marginBottom="15px";
+  var html="<b>"+qs[i].q+"</b><br>";
+  for(var j=0;j<3;j++){
+   // ALL buttons same color - NO green rectangle before click
+   html+="<button onclick='if("+j+"=="+qs[i].correct+"){score+=30; this.style.background=\"#86efac\";}else{this.style.background=\"#fca5a5\";} this.disabled=true; document.getElementById(\"scoreText\").innerHTML=\"Score: \"+score;' style='margin:3px; padding:8px 10px; border-radius:10px; border:2px solid #ddd; background:white;'>"+qs[i].a[j]+"</button>";
+  }
+  div.innerHTML=html+"<br>"; qa.appendChild(div);
+ }
+}
+function saveScore(){ boardList.push({name:player, score:score}); localStorage.setItem("loyaltyALL", JSON.stringify(boardList)); alert("Saved! Score: "+score); location.reload();}
+</script>
+</body>
+</html></pre>
+        </body>
+    </html>
